@@ -189,8 +189,7 @@ stages:
          $infile = "envdetails.json"
          Set-Content -Path $infile -Value ($envJSON | ConvertTo-Json)
          az devops invoke --area distributedtask --resource environments --route-parameters project=${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --http-method POST --in-file $infile --api-version "6.0-preview"
-         rm $infile
-
+    
 #############################################
 # Create Agent Pool Using DEVOPS REST API:-
 #############################################
