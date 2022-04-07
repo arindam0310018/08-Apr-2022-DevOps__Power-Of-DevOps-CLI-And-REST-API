@@ -1,0 +1,281 @@
+trigger:
+  none
+
+######################
+#DECLARE PARAMETERS:-
+######################
+parameters:
+- name: PAT
+  type: object
+  default: <Please Provide the PAT Value Here>
+
+- name: DevOpsOrganisation
+  type: object
+  default: https://dev.azure.com/ArindamMitra0251
+
+- name: DevOpsProjName
+  type: object
+  default: AM001
+
+- name: DevOpsProjDescription
+  type: object
+  default: Test Project
+
+######################
+#DECLARE VARIABLES:-
+######################
+variables:
+  DevOpsEnv: DEV
+  DevOpsPool: AMPool001
+  DevOpsGITUser: AM
+  DevOpsGITEmail: arindam0310018@gmail.com
+  DevOpsOrganisationWithoutHTTPS: dev.azure.com/ArindamMitra0251
+  DevOpsPipelineInfraFoldername: Infrastructure
+  DevOpsPipelineAppFoldername: Application
+  DevOpsReqReviewer1: arindam.mitra@axpo.onmicrosoft.com
+
+######################
+#DECLARE BUILD AGENT:-
+######################
+pool:
+  vmImage: 'ubuntu-latest'
+
+###################
+#DECLARE STAGES:-
+###################
+stages:
+
+- stage: AZ_DEVOPS_PROJECT
+  jobs:
+  - job: SETUP_DEVOPS_PROJECT
+    displayName: SETUP DEVOPS PROJECT
+    steps:
+
+########################################################
+# Install Az DevOps CLI Extension in the Build Agent:-
+#######################################################
+    - task: AzureCLI@1
+      displayName: INSTALL DEVOPS CLI EXTENSION
+      inputs:
+        azureSubscription: 'cl-axso-az-test-amcloud-test-cicd'
+        scriptType: ps
+        scriptLocation: inlineScript
+        inlineScript: |
+          az extension add --name azure-devops
+          az extension show --name azure-devops --output table
+
+###############################################################
+# Help Option of Az DevOps CLI Extension in the Build Agent:-
+###############################################################
+    - task: PowerShell@2
+      displayName: HELP OPTION OF AZ DEVOPS CLI
+      inputs:
+        targetType: 'inline'
+        script: |
+          az devops -h
+
+###################################################################
+# Display Az DevOps PAT in the Build Agent:-
+##################################################################
+    - task: CmdLine@2
+      displayName: DISPLAY PAT
+      inputs:
+        script: |
+         echo "PAT TOKEN IS: ${{ parameters.PAT }}"
+
+#########################################################################
+# Create DevOps Project:-
+# Azure DevOps organization URL required if not configured as default.
+# source-control - "git" is default
+# visibility - "private" is default
+#########################################################################
+    - task: PowerShell@2
+      displayName: CREATE DEVOPS PROJECT
+      inputs:
+        targetType: 'inline'
+        script: |
+         echo "${{ parameters.PAT }}" | az devops login  
+         az devops project create --name ${{ parameters.DevOpsProjName }} --description "${{ parameters.DevOpsProjDescription }}" --org ${{ parameters.DevOpsOrganisation }} --process Agile --output table
+
+##################################################
+# Set Default DevOps Organization and Project:-
+##################################################
+    - task: PowerShell@2
+      displayName: SET DEFAULTS DEVOPS ORG & PROJECT
+      inputs:
+        targetType: 'inline'
+        script: |
+         az devops configure --defaults organization=${{ parameters.DevOpsOrganisation }} project=${{ parameters.DevOpsProjName }}
+
+##########################
+# Create Repositories:-
+#########################
+    - task: PowerShell@2
+      displayName: CREATE REPOSITORIES 
+      inputs:
+        targetType: 'inline'
+        script: |
+         az repos create --name "${{ parameters.DevOpsProjName }}-INFRASTRUCTURE" -p ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --output table
+         az repos create --name "${{ parameters.DevOpsProjName }}-APPLICATION" -p ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --output table
+
+##############################
+# Initialize Repositories:-
+#############################
+    - task: PowerShell@2
+      displayName: INITIALIZE REPOSITORIES 
+      inputs:
+        targetType: 'inline'
+        script: |
+         mkdir ${{ parameters.DevOpsProjName }}
+         mkdir ${{ parameters.DevOpsProjName }}-APPLICATION
+
+         git config --global user.email "$(DevOpsGITEmail)"
+         git config --global user.name "$(DevOpsGITUser)"
+         git config --global init.defaultBranch main
+         git config --global --unset https.proxy
+         
+         cd ${{ parameters.DevOpsProjName }}
+         git init
+         "REPO NAME: ${{ parameters.DevOpsProjName }}" > README.md
+         git add .
+         git commit -m "Initial commit"
+         git remote add origin (az repos list --project "${{ parameters.DevOpsProjName }}" --org ${{ parameters.DevOpsOrganisation }} --query [1].webUrl)
+         git push https://$(DevOpsGITUser):${{ parameters.PAT }}@$(DevOpsOrganisationWithoutHTTPS)/${{ parameters.DevOpsProjName }}/_git/${{ parameters.DevOpsProjName }}
+
+         mkdir ${{ parameters.DevOpsProjName }}-INFRASTRUCTURE
+         cd ${{ parameters.DevOpsProjName }}-INFRASTRUCTURE
+         git init
+         "REPO NAME: ${{ parameters.DevOpsProjName }}-INFRASTRUCTURE" > README.md
+         git add .
+         git commit -m "Initial commit"
+         git remote add origin (az repos list --project "${{ parameters.DevOpsProjName }}" --org ${{ parameters.DevOpsOrganisation }} --query [2].webUrl)
+         git push https://$(DevOpsGITUser):${{ parameters.PAT }}@$(DevOpsOrganisationWithoutHTTPS)/${{ parameters.DevOpsProjName }}/_git/${{ parameters.DevOpsProjName }}-INFRASTRUCTURE
+        
+
+         mkdir ${{ parameters.DevOpsProjName }}-APPLICATION
+         cd ${{ parameters.DevOpsProjName }}-APPLICATION
+         git init
+         "REPO NAME: ${{ parameters.DevOpsProjName }}-APPLICATION" > README.md
+         git add .
+         git commit -m "Initial commit"
+         git remote add origin (az repos list --project "${{ parameters.DevOpsProjName }}" --org ${{ parameters.DevOpsOrganisation }} --query [2].webUrl)
+         git push https://$(DevOpsGITUser):${{ parameters.PAT }}@$(DevOpsOrganisationWithoutHTTPS)/${{ parameters.DevOpsProjName }}/_git/${{ parameters.DevOpsProjName }}-APPLICATION
+
+#############################
+# Create Pipeline folders:-
+#############################
+    - task: PowerShell@2
+      displayName: CREATE PIPELINE FOLDERS 
+      inputs:
+        targetType: 'inline'
+        script: |
+         az pipelines folder create --path \$(DevOpsPipelineInfraFoldername) --org ${{ parameters.DevOpsOrganisation }} -p ${{ parameters.DevOpsProjName }} --output table
+         az pipelines folder create --path \$(DevOpsPipelineAppFoldername) --org ${{ parameters.DevOpsOrganisation }} -p ${{ parameters.DevOpsProjName }} --output table
+         az pipelines folder list --org ${{ parameters.DevOpsOrganisation }} -p ${{ parameters.DevOpsProjName }} --output table
+
+#############################################
+# Create Environment Using DEVOPS REST API:-
+#############################################
+    - task: PowerShell@2
+      displayName: CREATE PIPELINE ENVIRONMENT 
+      inputs:
+        targetType: 'inline'
+        script: |
+         $env = "$(DevOpsEnv)"
+         $envJSON = @{
+         name = $env
+         description = "My $env environment"
+          }
+         $infile = "envdetails.json"
+         Set-Content -Path $infile -Value ($envJSON | ConvertTo-Json)
+         az devops invoke --area distributedtask --resource environments --route-parameters project=${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --http-method POST --in-file $infile --api-version "6.0-preview"
+         rm $infile
+
+#############################################
+# Create Agent Pool Using DEVOPS REST API:-
+#############################################
+    - task: PowerShell@2
+      displayName: CREATE AGENT POOL 
+      inputs:
+        targetType: 'inline'
+        script: |
+         $pool = "$(DevOpsPool)" 
+         $poolJSON = @{
+         name = $pool
+         description = "My $pool Agent Pool"
+          }
+         $infile = "pooldetails.json"
+         Set-Content -Path $infile -Value ($poolJSON | ConvertTo-Json)
+         az devops invoke --area distributedtask --resource pools --route-parameters project=${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --http-method POST --in-file $infile --api-version "6.0"
+
+###################################
+# Branch policies and settings:-
+###################################
+
+##########################################
+# Require a minimum number of reviewers:-
+##########################################
+    - task: PowerShell@2
+      displayName: POLICY - MIN NUMBER OF REVIEWERS 
+      inputs:
+        targetType: 'inline'
+        script: |
+         $repoID = az repos list --project ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --query [0].id
+         echo $repoID
+         az repos policy approver-count create --project ${{ parameters.DevOpsProjName }} --allow-downvotes false --blocking true --branch main --creator-vote-counts false --enabled true --minimum-approver-count 2 --repository-id $repoID --reset-on-source-push true --output table
+         
+         $repoID = az repos list --project ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --query [1].id
+         echo $repoID
+         az repos policy approver-count create --project ${{ parameters.DevOpsProjName }} --allow-downvotes false --blocking true --branch main --creator-vote-counts false --enabled true --minimum-approver-count 2 --repository-id $repoID --reset-on-source-push true --output table
+         
+         $repoID = az repos list --project ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --query [2].id
+         echo $repoID
+         az repos policy approver-count create --project ${{ parameters.DevOpsProjName }} --allow-downvotes false --blocking true --branch main --creator-vote-counts false --enabled true --minimum-approver-count 2 --repository-id $repoID --reset-on-source-push true --output table
+
+################################
+# Check for Linked Work Items:-
+################################
+    - task: PowerShell@2
+      displayName: POLICY - CHECK FOR LINKED WORK ITEMS 
+      inputs:
+        targetType: 'inline'
+        script: |
+         az repos policy work-item-linking create --project ${{ parameters.DevOpsProjName }} --blocking true --branch main --enabled true --repository-id $(az repos list --project ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --query [0].id) --output table
+         az repos policy work-item-linking create --project ${{ parameters.DevOpsProjName }} --blocking true --branch main --enabled true --repository-id $(az repos list --project ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --query [1].id) --output table
+         az repos policy work-item-linking create --project ${{ parameters.DevOpsProjName }} --blocking true --branch main --enabled true --repository-id $(az repos list --project ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --query [2].id) --output table
+
+################################
+# Check for Comment Resolution:-
+################################
+    - task: PowerShell@2
+      displayName: POLICY - CHECK FOR COMMENT RESOLUTION 
+      inputs:
+        targetType: 'inline'
+        script: |
+         az repos policy comment-required create --project ${{ parameters.DevOpsProjName }} --blocking true --branch main --enabled true --repository-id $(az repos list --project ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --query [0].id) --output table
+         az repos policy comment-required create --project ${{ parameters.DevOpsProjName }} --blocking true --branch main --enabled true --repository-id $(az repos list --project ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --query [1].id) --output table
+         az repos policy comment-required create --project ${{ parameters.DevOpsProjName }} --blocking true --branch main --enabled true --repository-id $(az repos list --project ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --query [2].id) --output table
+
+#######################
+# Limit merge types:-
+#######################
+    - task: PowerShell@2
+      displayName: POLICY - LIMIT MERGE TYPES 
+      inputs:
+        targetType: 'inline'
+        script: |
+         az repos policy merge-strategy create --project ${{ parameters.DevOpsProjName }} --blocking true --branch main --enabled true --repository-id $(az repos list --project ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --query [0].id) --allow-no-fast-forward true --allow-rebase true --allow-rebase-merge true --allow-squash true --output table
+         az repos policy merge-strategy create --project ${{ parameters.DevOpsProjName }} --blocking true --branch main --enabled true --repository-id $(az repos list --project ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --query [1].id) --allow-no-fast-forward true --allow-rebase true --allow-rebase-merge true --allow-squash true --output table
+         az repos policy merge-strategy create --project ${{ parameters.DevOpsProjName }} --blocking true --branch main --enabled true --repository-id $(az repos list --project ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --query [2].id) --allow-no-fast-forward true --allow-rebase true --allow-rebase-merge true --allow-squash true --output table
+
+###########################################
+# Automatically include code reviewers:-
+###########################################
+    - task: PowerShell@2
+      displayName: POLICY - CODE REVIEWERS 
+      inputs:
+        targetType: 'inline'
+        script: |
+         az repos policy required-reviewer create --project ${{ parameters.DevOpsProjName }} --blocking true --branch main --enabled true --message "REVIEW REQUIRED" --repository-id $(az repos list --project ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --query [0].id) --required-reviewer-ids $(DevOpsReqReviewer1) --output table
+         az repos policy required-reviewer create --project ${{ parameters.DevOpsProjName }} --blocking true --branch main --enabled true --message "REVIEW REQUIRED" --repository-id $(az repos list --project ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --query [1].id) --required-reviewer-ids $(DevOpsReqReviewer1) --output table
+         az repos policy required-reviewer create --project ${{ parameters.DevOpsProjName }} --blocking true --branch main --enabled true --message "REVIEW REQUIRED" --repository-id $(az repos list --project ${{ parameters.DevOpsProjName }} --org ${{ parameters.DevOpsOrganisation }} --query [2].id) --required-reviewer-ids $(DevOpsReqReviewer1) --output table
