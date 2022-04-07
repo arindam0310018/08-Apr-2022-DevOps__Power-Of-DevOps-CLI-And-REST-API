@@ -57,7 +57,7 @@ stages:
     - task: AzureCLI@1
       displayName: INSTALL DEVOPS CLI EXTENSION
       inputs:
-        azureSubscription: 'cl-axso-az-test-amcloud-test-cicd'
+        azureSubscription: 'amcloud-cicd-service-connection'
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
