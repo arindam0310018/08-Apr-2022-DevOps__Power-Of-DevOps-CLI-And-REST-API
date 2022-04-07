@@ -32,7 +32,7 @@ variables:
   DevOpsOrganisationWithoutHTTPS: dev.azure.com/ArindamMitra0251
   DevOpsPipelineInfraFoldername: Infrastructure
   DevOpsPipelineAppFoldername: Application
-  DevOpsReqReviewer1: arindam.mitra@axpo.onmicrosoft.com
+  DevOpsReqReviewer1: arindam.mitra@test.onmicrosoft.com
 
 ######################
 #DECLARE BUILD AGENT:-
