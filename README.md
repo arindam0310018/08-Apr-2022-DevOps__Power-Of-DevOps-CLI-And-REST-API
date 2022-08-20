@@ -12,6 +12,14 @@ In this Session, I will demonstrate how to __Create and Setup Azure DevOps Proje
 | [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/-8smQnve87k/0.jpg)](https://www.youtube.com/watch?v=-8smQnve87k) |
 | --------- |
 
+| __IN-PERSON SESSION:-__ |
+| --------- |
+| I presented this Demo as a part of __AZURE DEVOPS: TAKEAWAYS BEST PRACTISES AND LIVE DEMOS__ In-Person Speaker Session in __MICROSOFT AZURE BERN USER GROUP__ Forum/Platform. |
+| __Event Meetup Announcement:-__ |
+| ![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/cpz6voitr8v43psbgsii.jpg) |
+| __Moment Captured with Founders of MICROSOFT AZURE BERN USER GROUP "STEFAN JOHNER", "STEFAN ROTH", "PAUL AFFENTRANGER" and Co-organizer "DAMIEN BOWDEN":-__ |
+| ![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/jxz1bp0dw976e7s3j3c0.JPG) |
+
 | __WHAT DOES THE PIPELINE DO:-__ |
 | --------- |
 
