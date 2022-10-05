@@ -31,7 +31,7 @@ I had the Privilege to talk on this topic in __FOUR__ Azure Communities:-
 | __VIRTUAL SESSION:-__ |
 | __LIVE DEMO__ was Recorded as part of my Presentation in __AZURE BACK TO SCHOOL - 2022__ Forum/Platform |
 | Duration of My Demo = __49 Mins 17 Secs__ |
-| [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/z18Rf9SCYPs&t=1386s/0.jpg)](https://www.youtube.com/watch?v=z18Rf9SCYPs&t=1386s) |
+| [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/[z18Rf9SCYPs&t=1386s]/0.jpg)](https://www.youtube.com/watch?v=z18Rf9SCYPs&t=1386s) |
 
 | __WHAT DOES THE PIPELINE DO:-__ |
 | --------- |
